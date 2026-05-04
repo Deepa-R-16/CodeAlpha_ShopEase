@@ -9,7 +9,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-  origin: ['https://lucent-pithivier-ed9d04.netlify.app', 'http://localhost:5000'],
+  origin: '*',
   methods: ['GET','POST','PUT','DELETE'],
   allowedHeaders: ['Content-Type','Authorization']
 }));
