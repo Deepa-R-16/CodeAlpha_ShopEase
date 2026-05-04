@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Details — ShopEase</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-container">
+    <a href="/index.html" class="nav-logo">Shop<span>Ease</span></a>
+    <div class="nav-links">
+      <a href="/index.html">← Back to Shop</a>
+      <a href="/cart.html" class="cart-link">
+        🛒 Cart <span class="cart-badge" id="cart-badge">0</span>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<div class="container" style="padding-top:2rem;">
+  <div id="loading" class="loading"><div class="spinner"></div>Loading product...</div>
+  <div id="product-detail" style="display:none;"></div>
+  <div id="alert"></div>
+</div>
+
+<script>
+  // ── Config ──────────────────────────────────────────────
+  const API_URL = '/api';
+
+  const getToken = () => localStorage.getItem('token');
+  const getCart  = () => { try { return JSON.parse(localStorage.getItem('cart')) || []; } catch(e){ return []; } };
+  const saveCart = (cart) => { localStorage.setItem('cart', JSON.stringify(cart)); updateCartBadge(); };
+
+  function updateCartBadge() {
+    const cart  = getCart();
+    const count = cart.reduce((a, i) => a + i.quantity, 0);
+    const badge = document.getElementById('cart-badge');
+    if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'flex' : 'none'; }
+  }
+
+  function getStars(rating) {
+    return '★'.repeat(Math.floor(rating)) + '☆'.repeat(5 - Math.floor(rating));
+  }
+
+  // ── Load Product ────────────────────────────────────────
+  const params    = new URLSearchParams(window.location.search);
+  const productId = params.get('id');
+  let product     = null;
+
+  async function loadProduct() {
+    if (!productId) { window.location.href = '/index.html'; return; }
+    try {
+      const res  = await fetch(`${API_URL}/products/${productId}`);
+      product    = await res.json();
+      if (!res.ok) throw new Error(product.message);
+
+      document.title = `${product.name} — ShopEase`;
+      document.getElementById('product-detail').innerHTML = `
+        <div class="product-detail">
+          <div>
+            <img src="${product.image}" alt="${product.name}"
+              onerror="this.src='https://via.placeholder.com/400x300'">
+          </div>
+          <div class="product-detail-info">
+            <div class="product-category" style="margin-bottom:0.5rem;">${product.category}</div>
+            <h1>${product.name}</h1>
+            <div class="product-rating" style="margin:0.75rem 0;">
+              <span class="stars" style="font-size:1.1rem;">${getStars(product.rating)}</span>
+              <span class="rating-count">${product.rating.toFixed(1)} (${product.numReviews} reviews)</span>
+            </div>
+            <div class="product-detail-price">${product.price.toLocaleString('en-IN')}</div>
+            <p style="color:#6b7280;margin-bottom:1.5rem;line-height:1.6;">${product.description}</p>
+
+            <div style="margin-bottom:1rem;">
+              <strong>Availability: </strong>
+              <span class="stock-badge ${product.stock > 0 ? 'in-stock' : 'out-stock'}">
+                ${product.stock > 0 ? `In Stock (${product.stock} left)` : 'Out of Stock'}
+              </span>
+            </div>
+
+            ${product.stock > 0 ? `
+              <div class="quantity-selector">
+                <strong>Qty:</strong>
+                <button class="qty-btn" onclick="changeQty(-1)">−</button>
+                <input type="number" id="qty" class="qty-input" value="1" min="1" max="${product.stock}">
+                <button class="qty-btn" onclick="changeQty(1)">+</button>
+              </div>
+              <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1rem;">
+                <button class="btn btn-primary" onclick="addToCart()">🛒 Add to Cart</button>
+                <button class="btn btn-secondary" onclick="buyNow()">⚡ Buy Now</button>
+              </div>
+            ` : `<button class="btn btn-primary" disabled>Out of Stock</button>`}
+
+            <div style="margin-top:1.5rem;padding:1rem;background:#f3f4f6;border-radius:8px;font-size:0.9rem;">
+              <div>🚚 <strong>Free shipping</strong> on orders above ₹999</div>
+              <div style="margin-top:0.5rem;">↩️ <strong>Easy returns</strong> within 7 days</div>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('product-detail').style.display = 'block';
+    } catch (err) {
+      document.getElementById('loading').innerHTML =
+        `<div class="alert alert-error">Failed to load product: ${err.message}</div>`;
+    }
+    updateCartBadge();
+  }
+
+  function changeQty(delta) {
+    const input = document.getElementById('qty');
+    input.value = Math.min(Math.max(1, parseInt(input.value) + delta), product.stock);
+  }
+
+  function addToCart() {
+    const qty  = parseInt(document.getElementById('qty').value);
+    const cart = getCart();
+    const idx  = cart.findIndex(item => item._id === product._id);
+
+    if (idx > -1) {
+      cart[idx].quantity = Math.min(cart[idx].quantity + qty, product.stock);
+    } else {
+      cart.push({
+        _id: product._id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        quantity: qty
+      });
+    }
+    saveCart(cart);
+
+    const alertDiv = document.getElementById('alert');
+    alertDiv.innerHTML = `<div class="alert alert-success">
+      ✅ Added to cart! <a href="/cart.html" style="font-weight:700;color:#065f46;">View Cart →</a>
+    </div>`;
+    setTimeout(() => alertDiv.innerHTML = '', 3000);
+  }
+
+  function buyNow() {
+    const qty  = parseInt(document.getElementById('qty').value);
+    const cart = getCart();
+    const idx  = cart.findIndex(item => item._id === product._id);
+
+    if (idx > -1) {
+      cart[idx].quantity = Math.min(cart[idx].quantity + qty, product.stock);
+    } else {
+      cart.push({
+        _id: product._id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        quantity: qty
+      });
+    }
+    saveCart(cart);
+    window.location.href = '/cart.html';
+  }
+
+  loadProduct();
+</script>
+</body>
+</html>

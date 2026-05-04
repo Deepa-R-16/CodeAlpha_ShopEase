@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — ShopEase</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-container">
+    <a href="/index.html" class="nav-logo">Shop<span>Ease</span></a>
+    <div class="nav-links">
+      <a href="/index.html">← Back to Shop</a>
+    </div>
+  </div>
+</nav>
+
+<div class="auth-container">
+  <div class="auth-card">
+    <h2>🚀 Create Account</h2>
+    <p>Join ShopEase today — it's free!</p>
+    <div id="alert"></div>
+
+    <div class="form-group">
+      <label class="form-label">Full Name</label>
+      <input type="text" id="name" class="form-input" placeholder="Your full name">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email Address</label>
+      <input type="email" id="email" class="form-input" placeholder="you@example.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password (min 6 characters)</label>
+      <input type="password" id="password" class="form-input" placeholder="Choose a strong password">
+    </div>
+
+    <button class="btn btn-primary btn-full" id="register-btn" onclick="register()">
+      Create Account →
+    </button>
+    <p style="text-align:center;margin-top:1rem;color:#6b7280;">
+      Already have an account?
+      <a href="/login.html" style="color:#2563eb;font-weight:600;">Sign in</a>
+    </p>
+  </div>
+</div>
+
+<script>
+  const API_URL  = '/api';
+  const getToken = () => localStorage.getItem('token');
+
+  if (getToken()) window.location.href = '/index.html';
+
+  async function register() {
+    const name     = document.getElementById('name').value.trim();
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const alertDiv = document.getElementById('alert');
+    const btn      = document.getElementById('register-btn');
+
+    if (!name || !email || !password) {
+      alertDiv.innerHTML = '<div class="alert alert-error">Please fill in all fields.</div>';
+      return;
+    }
+    if (password.length < 6) {
+      alertDiv.innerHTML = '<div class="alert alert-error">Password must be at least 6 characters.</div>';
+      return;
+    }
+
+    btn.disabled    = true;
+    btn.textContent = 'Creating account...';
+
+    try {
+      const res  = await fetch(`${API_URL}/auth/register`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ name, email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify({
+        _id: data._id, name: data.name, email: data.email, role: data.role
+      }));
+      window.location.href = '/index.html';
+    } catch (err) {
+      alertDiv.innerHTML  = `<div class="alert alert-error">❌ ${err.message}</div>`;
+      btn.disabled        = false;
+      btn.textContent     = 'Create Account →';
+    }
+  }
+</script>
+</body>
+</html>

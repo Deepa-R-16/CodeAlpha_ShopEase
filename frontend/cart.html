@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cart — ShopEase</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-container">
+    <a href="/index.html" class="nav-logo">Shop<span>Ease</span></a>
+    <div class="nav-links">
+      <a href="/index.html">← Continue Shopping</a>
+      <a href="/cart.html" class="cart-link">
+        🛒 Cart <span class="cart-badge" id="cart-badge">0</span>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <h2 style="margin-bottom:1.5rem;">🛒 Your Shopping Cart</h2>
+  <div id="cart-content"></div>
+</div>
+
+<!-- Checkout Modal -->
+<div id="checkout-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:white;padding:2rem;border-radius:12px;width:90%;max-width:500px;
+    max-height:90vh;overflow-y:auto;">
+    <h3 style="margin-bottom:1.5rem;">📦 Shipping Details</h3>
+    <div id="checkout-alert"></div>
+    <div class="form-group">
+      <label class="form-label">Full Address *</label>
+      <input type="text" id="address" class="form-input" placeholder="House No, Street, Area">
+    </div>
+    <div class="form-group">
+      <label class="form-label">City *</label>
+      <input type="text" id="city" class="form-input" placeholder="Chennai">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Postal Code *</label>
+      <input type="text" id="postalCode" class="form-input" placeholder="600001">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Country</label>
+      <input type="text" id="country" class="form-input" value="India">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Payment Method</label>
+      <select id="paymentMethod" class="form-input">
+        <option value="Cash on Delivery">Cash on Delivery</option>
+        <option value="UPI">UPI</option>
+        <option value="Credit/Debit Card">Credit/Debit Card</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:1rem;margin-top:1rem;">
+      <button class="btn btn-primary btn-full" id="place-order-btn" onclick="placeOrder()">
+        ✅ Place Order
+      </button>
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── Config ──────────────────────────────────────────────
+  const API_URL  = '/api';
+  const getToken = () => localStorage.getItem('token');
+  const getCart  = () => { try { return JSON.parse(localStorage.getItem('cart')) || []; } catch(e){ return []; } };
+  const saveCart = (cart) => { localStorage.setItem('cart', JSON.stringify(cart)); updateCartBadge(); };
+
+  function updateCartBadge() {
+    const count = getCart().reduce((a, i) => a + i.quantity, 0);
+    const badge = document.getElementById('cart-badge');
+    if (badge) { badge.textContent = count; badge.style.display = count > 0 ? 'flex' : 'none'; }
+  }
+
+  // ── Render Cart ─────────────────────────────────────────
+  function renderCart() {
+    const cart    = getCart();
+    const content = document.getElementById('cart-content');
+    updateCartBadge();
+
+    if (cart.length === 0) {
+      content.innerHTML = `
+        <div style="text-align:center;padding:4rem;background:white;border-radius:12px;
+          box-shadow:0 4px 6px -1px rgba(0,0,0,0.1);">
+          <div style="font-size:4rem;margin-bottom:1rem;">🛒</div>
+          <h3 style="margin-bottom:0.5rem;">Your cart is empty</h3>
+          <p style="color:#6b7280;margin-bottom:1.5rem;">Add some products to get started!</p>
+          <a href="/index.html" class="btn btn-primary">Start Shopping</a>
+        </div>`;
+      return;
+    }
+
+    const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const shipping = subtotal > 999 ? 0 : 99;
+    const total    = subtotal + shipping;
+
+    content.innerHTML = `
+      <div class="cart-layout">
+        <div>
+          ${cart.map((item, i) => `
+            <div class="cart-item">
+              <img src="${item.image}" alt="${item.name}"
+                onerror="this.src='https://via.placeholder.com/80'"
+                style="width:80px;height:80px;object-fit:cover;border-radius:8px;">
+              <div class="cart-item-info">
+                <div class="cart-item-name">${item.name}</div>
+                <div class="cart-item-price">₹${item.price.toLocaleString('en-IN')} each</div>
+              </div>
+              <div class="quantity-selector">
+                <button class="qty-btn" onclick="updateQty(${i}, -1)">−</button>
+                <span style="font-weight:700;min-width:24px;text-align:center;">${item.quantity}</span>
+                <button class="qty-btn" onclick="updateQty(${i}, 1)">+</button>
+              </div>
+              <div style="font-weight:700;min-width:80px;text-align:right;color:#2563eb;">
+                ₹${(item.price * item.quantity).toLocaleString('en-IN')}
+              </div>
+              <button onclick="removeItem(${i})"
+                style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#ef4444;padding:0.5rem;">
+                ✕
+              </button>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="cart-summary">
+          <h3>Order Summary</h3>
+          <div class="summary-row">
+            <span>Subtotal (${cart.reduce((a,i)=>a+i.quantity,0)} items)</span>
+            <span>₹${subtotal.toLocaleString('en-IN')}</span>
+          </div>
+          <div class="summary-row">
+            <span>Shipping</span>
+            <span style="color:#10b981;">${shipping === 0 ? '🎉 FREE' : '₹' + shipping}</span>
+          </div>
+          ${shipping > 0 ? `<div style="font-size:0.8rem;color:#6b7280;margin-bottom:0.5rem;">
+            Add ₹${(1000 - subtotal).toLocaleString('en-IN')} more for free shipping</div>` : ''}
+          <div class="summary-row summary-total">
+            <span>Total</span>
+            <span>₹${total.toLocaleString('en-IN')}</span>
+          </div>
+          <button class="btn btn-primary btn-full" style="margin-top:1rem;" onclick="openCheckout()">
+            Proceed to Checkout →
+          </button>
+          <button class="btn btn-danger btn-full" style="margin-top:0.5rem;" onclick="clearCartConfirm()">
+            🗑 Clear Cart
+          </button>
+        </div>
+      </div>`;
+  }
+
+  function updateQty(index, delta) {
+    const cart = getCart();
+    cart[index].quantity = Math.max(1, cart[index].quantity + delta);
+    saveCart(cart);
+    renderCart();
+  }
+
+  function removeItem(index) {
+    const cart = getCart();
+    cart.splice(index, 1);
+    saveCart(cart);
+    renderCart();
+  }
+
+  function clearCartConfirm() {
+    if (confirm('Remove all items from cart?')) { saveCart([]); renderCart(); }
+  }
+
+  // ── Checkout ────────────────────────────────────────────
+  function openCheckout() {
+    if (!getToken()) {
+      if (confirm('You need to login to checkout.\n\nGo to login page?')) {
+        window.location.href = '/login.html';
+      }
+      return;
+    }
+    document.getElementById('checkout-modal').style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('checkout-modal').style.display = 'none';
+  }
+
+  async function placeOrder() {
+    const address       = document.getElementById('address').value.trim();
+    const city          = document.getElementById('city').value.trim();
+    const postalCode    = document.getElementById('postalCode').value.trim();
+    const country       = document.getElementById('country').value.trim();
+    const paymentMethod = document.getElementById('paymentMethod').value;
+    const alertDiv      = document.getElementById('checkout-alert');
+
+    if (!address || !city || !postalCode) {
+      alertDiv.innerHTML = '<div class="alert alert-error">Please fill all required fields.</div>';
+      return;
+    }
+
+    const cart = getCart();
+    const btn  = document.getElementById('place-order-btn');
+    btn.disabled    = true;
+    btn.textContent = 'Placing Order...';
+
+    try {
+      const orderItems = cart.map(item => ({
+        product:  item._id,
+        name:     item.name,
+        image:    item.image,
+        price:    item.price,
+        quantity: item.quantity
+      }));
+
+      const response = await fetch(`${API_URL}/orders`, {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({
+          orderItems,
+          shippingAddress: { address, city, postalCode, country },
+          paymentMethod
+        })
+      });
+
+      const order = await response.json();
+      if (!response.ok) throw new Error(order.message);
+
+      saveCart([]);
+      closeModal();
+      alert(`✅ Order placed successfully!\n\nOrder ID: ${order._id}\nTotal: ₹${order.totalPrice.toLocaleString('en-IN')}`);
+      window.location.href = '/orders.html';
+
+    } catch (err) {
+      alertDiv.innerHTML = `<div class="alert alert-error">❌ ${err.message}</div>`;
+      btn.disabled    = false;
+      btn.textContent = '✅ Place Order';
+    }
+  }
+
+  renderCart();
+</script>
+</body>
+</html>
