@@ -8,7 +8,11 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({ origin: '*', methods: ['GET','POST','PUT','DELETE'], allowedHeaders: ['Content-Type','Authorization'] }));
+app.use(cors({
+  origin: ['http://localhost:5000', 'https://shopease-backend-7hdy.onrender.com'],
+  methods: ['GET','POST','PUT','DELETE'],
+  allowedHeaders: ['Content-Type','Authorization']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

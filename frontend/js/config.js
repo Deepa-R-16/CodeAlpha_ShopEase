@@ -1,1 +1,1 @@
-const API_URL = '/api';
+const API_URL = 'https://shopease-backend-7hdy.onrender.com/api';
