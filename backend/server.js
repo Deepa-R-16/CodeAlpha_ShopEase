@@ -9,7 +9,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-  origin: ['http://localhost:5000', 'https://shopease-backend-7hdy.onrender.com'],
+  origin: ['https://lucent-pithivier-ed9d04.netlify.app', 'http://localhost:5000'],
   methods: ['GET','POST','PUT','DELETE'],
   allowedHeaders: ['Content-Type','Authorization']
 }));
