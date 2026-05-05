@@ -57,7 +57,7 @@
 </div>
 
 <script>
-  const API_URL = 'https://shopease-backend-7hdy.onrender.com/api'
+  const API_URL = 'https://shopease-backend-7hdy.onrender.com/api';
   const getToken = () => localStorage.getItem('token');
   const getUser  = () => { try { return JSON.parse(localStorage.getItem('user')); } catch(e){ return null; } };
   const getCart  = () => { try { return JSON.parse(localStorage.getItem('cart')) || []; } catch(e){ return []; } };
@@ -121,14 +121,11 @@
 
       const grid = document.getElementById('products-grid');
       if (products.length === 0) {
-        grid.innerHTML = `<p style="text-align:center;color:#6b7280;padding:3rem;grid-column:1/-1;">
-          No products found.</p>`;
+        grid.innerHTML = `<p style="text-align:center;color:#6b7280;padding:3rem;grid-column:1/-1;">No products found.</p>`;
       } else {
         grid.innerHTML = products.map(p => `
-          <div class="product-card" onclick="window.location='/product.html?id=${p._id}'"
-            style="cursor:pointer;">
-            <img src="${p.image}" alt="${p.name}"
-              onerror="this.src='https://via.placeholder.com/400x300'">
+          <div class="product-card" onclick="window.location='/product.html?id=${p._id}'" style="cursor:pointer;">
+            <img src="${p.image}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/400x300'">
             <div class="product-info">
               <div class="product-category">${p.category}</div>
               <div class="product-name">${p.name}</div>
@@ -153,8 +150,7 @@
       if (data.pages > 1) {
         const pg = document.getElementById('pagination');
         for (let i = 1; i <= data.pages; i++) {
-          pg.innerHTML += `<button class="page-btn ${i === page ? 'active' : ''}"
-            onclick="loadProducts(${i})">${i}</button>`;
+          pg.innerHTML += `<button class="page-btn ${i === page ? 'active' : ''}" onclick="loadProducts(${i})">${i}</button>`;
         }
       }
     } catch (err) {
