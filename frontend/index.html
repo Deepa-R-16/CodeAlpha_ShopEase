@@ -108,7 +108,7 @@
       const category = document.getElementById('category-filter').value;
       const sort     = document.getElementById('sort-filter').value;
 
-      let url = `/api/products?page=${page}`;
+      let url = `${API_URL}/products?page=${page}`;
       if (keyword)  url += `&keyword=${encodeURIComponent(keyword)}`;
       if (category) url += `&category=${encodeURIComponent(category)}`;
 
